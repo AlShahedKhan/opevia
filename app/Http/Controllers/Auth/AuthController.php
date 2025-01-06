@@ -10,6 +10,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Jobs\Auth\LoginJob;
+use App\Jobs\Auth\LogoutJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cookie;
@@ -56,7 +57,9 @@ class AuthController extends Controller
             }
 
             $data = $request->only(['email', 'password']);
+
             LoginJob::dispatchSync($data);
+            
             $user = User::where('email', $data['email'])->first();
 
             if (!$user) {
@@ -82,12 +85,11 @@ class AuthController extends Controller
     public function logout()
     {
         return $this->safeCall(function () {
-            $cookie = Cookie::forget('jwt');
-
+            LogoutJob::dispatchSync('jwt');
             return response()->json([
                 'status' => true,
                 'message' => 'User logged out successfully',
-            ])->cookie($cookie);
+            ]);
         });
     }
 }
