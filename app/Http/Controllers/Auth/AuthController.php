@@ -8,6 +8,8 @@ use App\Traits\HandlesApiResponse;
 use App\Http\Controllers\Controller;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\LoginRequest;
+use App\Jobs\Auth\LoginJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cookie;
@@ -44,5 +46,48 @@ class AuthController extends Controller
         });
     }
 
+    public function login(LoginRequest $request)
+    {
+        return $this->safeCall(function () use ($request) {
+            $validated = $request->validated();
 
+            if (!$validated) {
+                return $this->errorResponse('Validation error', 422);
+            }
+
+            $data = $request->only(['email', 'password']);
+            LoginJob::dispatchSync($data);
+            $user = User::where('email', $data['email'])->first();
+
+            if (!$user) {
+                return $this->errorResponse('User not found', 404);
+            }
+
+            if (!Hash::check($data['password'], $user->password)) {
+                return $this->errorResponse('Invalid password', 401);
+            }
+
+            $token = JWTAuth::fromUser($user);
+            $cookie = cookie('jwt', $token, 60 * 24);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'User logged in successfully',
+                'user' => $user,
+                'token' => $token,
+            ])->cookie($cookie);
+        });
+    }
+
+    public function logout()
+    {
+        return $this->safeCall(function () {
+            $cookie = Cookie::forget('jwt');
+
+            return response()->json([
+                'status' => true,
+                'message' => 'User logged out successfully',
+            ])->cookie($cookie);
+        });
+    }
 }
