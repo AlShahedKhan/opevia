@@ -24,25 +24,14 @@ class ForgetPasswordJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): array
+    public function handle()
     {
         Log::info("ForgetPasswordJob started", ['email' => $this->email]);
 
         $status = Password::sendResetLink(['email' => $this->email]);
 
-        if ($status === Password::RESET_LINK_SENT) {
-            Log::info("ForgetPasswordJob completed", ['status' => $status]);
-            return [
-                'status' => true,
-                'message' => 'Password reset link sent successfully',
-            ];
-        } else {
-            Log::error("ForgetPasswordJob failed", ['status' => $status]);
-            return [
-                'status' => false,
-                'message' => 'Unable to send password reset link',
-                'errors' => ['email' => __($status)],
-            ];
-        }
+        Log::info("ForgetPasswordJob completed", ['status' => $status]);
+
+        return $status;
     }
 }

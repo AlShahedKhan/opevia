@@ -103,23 +103,18 @@ class AuthController extends Controller
             $validated = $request->validated();
 
             if (!$validated) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Validation error',
-                    'status_code' => 422,
-                ], 422);
+                return $this->errorResponse('Validation error', 422);
             }
 
             $job = new ForgetPasswordJob($request->email);
 
-            // Dispatch the job and capture its response
-            $jobResponse = $job->handle();
+            $status = $job->handle();
 
-            if ($jobResponse['status']) {
-                return response()->json($jobResponse, 200);
+            if ($status === Password::RESET_LINK_SENT) {
+                return $this->successResponse('Password reset link sent successfully');
+            } else {
+                return $this->errorResponse('Unable to send password reset link', 422);
             }
-
-            return response()->json($jobResponse, 500);
         });
     }
 
