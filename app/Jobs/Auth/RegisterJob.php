@@ -4,14 +4,13 @@ namespace App\Jobs\Auth;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
 class RegisterJob implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable;
 
     protected $data;
 
@@ -26,20 +25,26 @@ class RegisterJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle()
     {
         try {
             Log::info('RegisterJob started', ['data' => $this->data]);
 
-            $user = User::create([
+            User::create([
                 'name' => $this->data['name'],
                 'email' => $this->data['email'],
                 'password' => Hash::make($this->data['password']),
+                'role' => $this->data['role'],
+                'is_admin' => $this->data['is_admin'] ?? false,
             ]);
 
-            Log::info('RegisterJob completed', ['user' => $user]);
+            Log::info('RegisterJob completed successfully.');
         } catch (\Exception $e) {
-            Log::error('RegisterJob failed', ['error' => $e->getMessage()]);
+            Log::error('RegisterJob failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 }
+

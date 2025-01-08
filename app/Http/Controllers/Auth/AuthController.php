@@ -10,6 +10,7 @@ use App\Jobs\Auth\RegisterJob;
 use App\Traits\HandlesApiResponse;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Requests\LoginRequest;
+use App\Jobs\Auth\ResetPasswordJob;
 use App\Http\Controllers\Controller;
 use App\Jobs\Auth\ForgetPasswordJob;
 use Illuminate\Support\Facades\Hash;
@@ -31,60 +32,63 @@ class AuthController extends Controller
                 return $this->errorResponse('Validation error', 422);
             }
 
-            $data = $request->only(['name', 'email', 'password']);
-            RegisterJob::dispatchSync($data);
+            $data = $request->only(['name', 'email', 'password', 'role', 'is_admin']);
+
+            // Dispatch the RegisterJob to handle user creation
+            RegisterJob::dispatchSync($data); // Now it will work
+
+            // Fetch the created user
             $user = User::where('email', $data['email'])->first();
 
             if (!$user) {
                 return $this->errorResponse('User not found after registration', 500);
             }
 
+            // Generate JWT token for the user with custom claims
             $token = JWTAuth::fromUser($user);
-            $cookie = cookie('jwt', $token, 60 * 24);
 
-            return response()->json([
-                'status' => true,
-                'message' => 'User registered successfully',
+            return $this->successResponse('User registered successfully', [
                 'user' => $user,
                 'token' => $token,
-            ])->cookie($cookie);
+            ]);
         });
     }
+
+
+
 
     public function login(LoginRequest $request)
-    {
-        return $this->safeCall(function () use ($request) {
-            $validated = $request->validated();
+{
+    return $this->safeCall(function () use ($request) {
+        $validated = $request->validated();
 
-            if (!$validated) {
-                return $this->errorResponse('Validation error', 422);
-            }
+        if (!$validated) {
+            return $this->errorResponse('Validation error', 422);
+        }
 
-            $data = $request->only(['email', 'password']);
+        $data = $request->only(['email', 'password']);
 
-            LoginJob::dispatchSync($data);
+        // Dispatch the LoginJob to handle login validation
+        $result = LoginJob::dispatchSync($data); // Now we return the result from LoginJob
 
-            $user = User::where('email', $data['email'])->first();
+        // If the job returns an error, handle it
+        if (!$result['status']) {
+            return $this->errorResponse($result['message'], $result['code']);
+        }
 
-            if (!$user) {
-                return $this->errorResponse('User not found', 404);
-            }
+        $user = $result['user'];
+        $token = JWTAuth::fromUser($user);
+        $cookie = cookie('jwt', $token, 60 * 24); // 1 day
 
-            if (!Hash::check($data['password'], $user->password)) {
-                return $this->errorResponse('Invalid password', 401);
-            }
+        return response()->json([
+            'status' => true,
+            'message' => 'User logged in successfully',
+            'user' => $user,
+            'token' => $token,
+        ])->cookie($cookie);
+    });
+}
 
-            $token = JWTAuth::fromUser($user);
-            $cookie = cookie('jwt', $token, 60 * 24);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'User logged in successfully',
-                'user' => $user,
-                'token' => $token,
-            ])->cookie($cookie);
-        });
-    }
 
     public function logout()
     {
@@ -118,9 +122,6 @@ class AuthController extends Controller
         });
     }
 
-
-
-
     public function resetPassword(ResetPasswordRequest $request)
     {
         return $this->safeCall(function () use ($request) {
@@ -130,26 +131,16 @@ class AuthController extends Controller
                 return $this->errorResponse('Validation error', 422);
             }
 
-            $status = Password::reset(
-                $request->only('email', 'password', 'password_confirmation', 'token'),
-                function (User $user, string $password) {
-                    $user->forceFill([
-                        'password' => Hash::make($password),
-                    ])->setRememberToken(Str::random(60));
+            $credentials = $request->only('email', 'password', 'password_confirmation', 'token');
 
-                    $user->save();
+            $job = new ResetPasswordJob($credentials);
 
-                    event(new PasswordReset($user));
-                }
-            );
+            $status = $job->handle();
 
             if ($status === Password::PASSWORD_RESET) {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Password reset successfully',
-                ]);
+                return $this->successResponse('Password reset successfully');
             } else {
-                return $this->errorResponse('Failed to reset password', 422, ['email' => __($status)]);
+                return $this->errorResponse('Failed to reset password', 422, __($status));
             }
         });
     }

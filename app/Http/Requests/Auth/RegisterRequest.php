@@ -25,6 +25,8 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', 'min:8'],
+            'role' => 'required|in:client,worker', // Role must be client or worker
+            'is_admin' => 'boolean', // is_admin must be a boolean
         ];
     }
 }
