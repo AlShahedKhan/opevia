@@ -16,6 +16,8 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 Route::post('contacts', [ContactController::class, 'store']);
 // Route::get('/search-workers', [WorkerSearchController::class, 'search'])->name('search.workers');
 
+Route::get('/workers', [WorkerController::class, 'index']);
+Route::get('/workers/{worker}', [WorkerController::class, 'show']);
 Route::post('/search-workers', [WorkerSearchController::class, 'search']);
 
 
@@ -23,6 +25,8 @@ Route::group([
     "middleware" => "auth:api"
 ], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+
     Route::post('/clients/store', [ClientController::class, 'store']);
+
     Route::post('/workers/store', [WorkerController::class, 'store']);
 });

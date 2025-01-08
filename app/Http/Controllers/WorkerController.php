@@ -7,10 +7,24 @@ use App\Jobs\Worker\WorkerStoreJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Worker\WorkerStoreRequest;
+use App\Jobs\Worker\GetAllWorkerJob;
+use App\Models\Worker;
 
 class WorkerController extends Controller
 {
     use HandlesApiResponse;
+
+    public function index()
+    {
+        return $this->safeCall(function () {
+            // Dispatch the job synchronously and get the workers
+            $workers = GetAllWorkerJob::dispatchSync();
+
+            return $this->successResponse('Workers fetched successfully', [
+                'data' => $workers,
+            ]);
+        });
+    }
 
     public function store(WorkerStoreRequest $request)
     {
@@ -72,6 +86,15 @@ class WorkerController extends Controller
 
             return $this->successResponse('Worker created successfully', [
                 'data' => $validated,
+            ]);
+        });
+    }
+
+    public function show(Worker $worker)
+    {
+        return $this->safeCall(function () use ($worker) {
+            return $this->successResponse('Worker fetched successfully', [
+                'data' => $worker,
             ]);
         });
     }
