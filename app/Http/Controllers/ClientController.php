@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Traits\HandlesApiResponse;
 use App\Jobs\Client\ClientStoreJob;
-use App\Http\Requests\Client\ClientRequest;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\Client\ClientRequest;
 
 class ClientController extends Controller
 {
@@ -13,6 +15,12 @@ class ClientController extends Controller
     public function store(ClientRequest $request)
     {
         return $this->safeCall(function () use ($request) {
+            // Check if the user is authenticated and has the role of a client
+            $user = Auth::user();
+            if (!$user || $user->role !== 'client') {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
             // Log all incoming request data
             Log::info('Full Request Data:', ['all' => $request->all()]);
             Log::info('Uploaded Files:', ['files' => $request->file()]);
@@ -33,10 +41,7 @@ class ClientController extends Controller
                         ]);
                     }
                 }
-            }
-
-
-             elseif ($request->hasFile('photo')) {
+            } elseif ($request->hasFile('photo')) {
                 Log::info('Single photo field is present in the request');
                 $photo = $request->file('photo');
                 if ($photo->isValid()) {
@@ -65,7 +70,9 @@ class ClientController extends Controller
             // Dispatch the job
             ClientStoreJob::dispatchSync($validated);
 
-            return $this->successResponse('Client created successfully');
+            return $this->successResponse('Client created successfully', [
+                'data' => $validated,
+            ]);
         });
     }
 }
