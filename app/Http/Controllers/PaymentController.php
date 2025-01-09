@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Client;
 use Stripe\Stripe;
+use App\Models\Client;
+use App\Models\Worker;
 use Stripe\PaymentIntent;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Notifications\PaymentHeldNotification;
-use App\Notifications\PaymentReleasedNotification;
 use App\Notifications\PaymentReceivedNotification;
+use App\Notifications\PaymentReleasedNotification;
 
 class PaymentController extends Controller
 {
@@ -173,6 +174,64 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Error releasing payment: ' . $e->getMessage()], 500);
         }
     }
+
+
+/**
+ * Refund a PaymentIntent.
+ */
+/**
+ * Refund a PaymentIntent for a worker.
+ */
+public function refundPayment(Request $request, Worker $worker)
+{
+    Log::info("Processing refund request for Worker ID: {$worker->id}");
+
+    try {
+        // Validate the request
+        $request->validate([
+            'payment_intent_id' => 'required|string', // PaymentIntent ID
+            'amount' => 'nullable|numeric|min:1', // Optional: Amount in cents
+        ]);
+
+        // Set Stripe API key
+        \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        // Retrieve the PaymentIntent to ensure it exists
+        $paymentIntent = \Stripe\PaymentIntent::retrieve($request->payment_intent_id);
+
+        if (!$paymentIntent) {
+            Log::error("PaymentIntent not found: {$request->payment_intent_id}");
+            return response()->json(['message' => 'PaymentIntent not found.'], 404);
+        }
+
+        Log::info("Refunding PaymentIntent ID: {$request->payment_intent_id} for Worker ID: {$worker->id}");
+
+        // Create a refund
+        $refund = \Stripe\Refund::create([
+            'payment_intent' => $request->payment_intent_id,
+            'amount' => $request->has('amount') ? $request->amount * 100 : null, // Refund full amount if 'amount' is not provided
+        ]);
+
+        // Log successful refund
+        Log::info("Refund processed successfully for PaymentIntent ID: {$request->payment_intent_id}");
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Refund processed successfully.',
+            'refund' => $refund,
+        ], 200);
+    } catch (\Exception $e) {
+        // Log the error
+        Log::error("Error processing refund for Worker ID: {$worker->id}, PaymentIntent ID: {$request->payment_intent_id}, Error: {$e->getMessage()}");
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Refund processing failed.',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
 
 
 }

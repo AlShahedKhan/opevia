@@ -37,6 +37,8 @@ Route::group([
     Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
     Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
     Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
+    Route::post('/refund-payment/{workers}', [PaymentController::class, 'refundPayment']);
+
 });
 
 Route::get('/test-log/{client}', [TestController::class, 'testLog']);
