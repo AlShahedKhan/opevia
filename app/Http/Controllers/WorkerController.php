@@ -14,6 +14,9 @@ class WorkerController extends Controller
 {
     use HandlesApiResponse;
 
+    /**
+     * Fetch all workers.
+     */
     public function index()
     {
         return $this->safeCall(function () {
@@ -26,6 +29,9 @@ class WorkerController extends Controller
         });
     }
 
+    /**
+     * Create a new worker.
+     */
     public function store(WorkerStoreRequest $request)
     {
         return $this->safeCall(function () use ($request) {
@@ -44,8 +50,7 @@ class WorkerController extends Controller
             // Handle both single and multiple file uploads
             $photoPaths = [];
             if ($request->hasFile('photos')) {
-                $photoFiles = $request->file('photos');
-                foreach ($photoFiles as $photo) {
+                foreach ($request->file('photos') as $photo) {
                     if ($photo->isValid()) {
                         $path = $photo->store('photos', 'public');
                         $photoPaths[] = $path;
@@ -55,28 +60,10 @@ class WorkerController extends Controller
                         ]);
                     }
                 }
-            } elseif ($request->hasFile('photo')) {
-                Log::info('Single photo field is present in the request');
-                $photo = $request->file('photo');
-                if ($photo->isValid()) {
-                    $path = $photo->store('photos', 'public');
-                    $photoPaths[] = $path;
-                    Log::info('Single photo uploaded successfully', [
-                        'original_name' => $photo->getClientOriginalName(),
-                        'stored_path' => $path,
-                    ]);
-                } else {
-                    Log::warning('Invalid single photo file');
-                }
-            } else {
-                Log::warning('No photos were uploaded');
             }
 
-            // Replace photos with their stored paths in the validated data
             $validated['photos'] = $photoPaths;
-
-            // Remove the `photo` field from the validated data to avoid serialization issues
-            unset($validated['photo']);
+            $validated['user_id'] = $user->id;
 
             // Log final validated data
             Log::info('Final validated data passed to WorkerStoreJob:', ['data' => $validated]);
@@ -84,12 +71,20 @@ class WorkerController extends Controller
             // Dispatch the job
             WorkerStoreJob::dispatchSync($validated);
 
+            // Retrieve the newly created worker by email (or any unique identifier)
+            $worker = Worker::where('email', $validated['email'])->latest('id')->first();
+
             return $this->successResponse('Worker created successfully', [
+                'id' => $worker->id,
                 'data' => $validated,
             ]);
         });
     }
 
+
+    /**
+     * Fetch a specific worker.
+     */
     public function show(Worker $worker)
     {
         return $this->safeCall(function () use ($worker) {

@@ -33,6 +33,7 @@ class WorkerStoreJob implements ShouldQueue
         try {
             // Create the worker record with the photo paths
             Worker::create([
+                'user_id' => $this->data['user_id'], // Save user ID
                 'company_name' => $this->data['company_name'],
                 'email' => $this->data['email'],
                 'contact_number' => $this->data['contact_number'],

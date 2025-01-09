@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,49 +9,44 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'is_admin',
+        'name',       // User Name
+        'email',      // Email Address
+        'password',   // Password
+        'role',       // Role: 'client' or 'worker'
+        'is_admin',   // Admin flag
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password',         // Hide password
+        'remember_token',   // Hide remember token
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Relationship: User has one Client.
      */
-    protected function casts(): array
+    public function client()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasOne(Client::class, 'user_id');
     }
 
     /**
-     * Get the identifier that will be stored in the subject claim of the JWT.
-     *
-     * @return mixed
+     * Relationship: User has one Worker.
+     */
+    public function worker()
+    {
+        return $this->hasOne(Worker::class, 'user_id');
+    }
+
+    /**
+     * Get the identifier for JWT.
      */
     public function getJWTIdentifier()
     {
@@ -60,9 +54,7 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
-     *
-     * @return array
+     * Get custom claims for JWT.
      */
     public function getJWTCustomClaims()
     {

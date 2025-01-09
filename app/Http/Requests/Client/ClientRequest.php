@@ -34,6 +34,8 @@ class ClientRequest extends FormRequest
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'privacy_policy_agreement' => 'required|boolean',
+            'worker_id' => 'required|exists:workers,id', // Ensure worker_id exists in the workers table
+
         ];
     }
 

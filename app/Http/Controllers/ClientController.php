@@ -5,73 +5,83 @@ namespace App\Http\Controllers;
 use App\Traits\HandlesApiResponse;
 use App\Jobs\Client\ClientStoreJob;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\Client\GetAllClientJob;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Client\ClientRequest;
+use App\Models\Client;
 
 class ClientController extends Controller
 {
     use HandlesApiResponse;
 
+    public function index()
+    {
+        return $this->safeCall(function () {
+            // Dispatch the job synchronously and get the workers
+            $workers = GetAllClientJob::dispatchSync();
+
+            return $this->successResponse('Workers fetched successfully', [
+                'data' => $workers,
+            ]);
+        });
+    }
+
     public function store(ClientRequest $request)
     {
         return $this->safeCall(function () use ($request) {
-            // Check if the user is authenticated and has the role of a client
             $user = Auth::user();
             if (!$user || $user->role !== 'client') {
                 return $this->errorResponse('Unauthorized access', 403);
             }
 
-            // Log all incoming request data
-            Log::info('Full Request Data:', ['all' => $request->all()]);
-            Log::info('Uploaded Files:', ['files' => $request->file()]);
-
             $validated = $request->validated();
 
-            // Handle both single and multiple file uploads
+            // Check if worker_id exists in the database
+            $workerId = $validated['worker_id'];
+            if (!\App\Models\Worker::find($workerId)) {
+                return $this->errorResponse('Invalid worker_id. Worker not found.', 422);
+            }
+
             $photoPaths = [];
             if ($request->hasFile('photos')) {
-                $photoFiles = $request->file('photos');
-                foreach ($photoFiles as $photo) {
+                foreach ($request->file('photos') as $photo) {
                     if ($photo->isValid()) {
                         $path = $photo->store('photos', 'public');
                         $photoPaths[] = $path;
-                        Log::info('Photo uploaded successfully', [
-                            'original_name' => $photo->getClientOriginalName(),
-                            'stored_path' => $path,
-                        ]);
                     }
                 }
-            } elseif ($request->hasFile('photo')) {
-                Log::info('Single photo field is present in the request');
-                $photo = $request->file('photo');
-                if ($photo->isValid()) {
-                    $path = $photo->store('photos', 'public');
-                    $photoPaths[] = $path;
-                    Log::info("Single photo uploaded successfully", [
-                        'original_name' => $photo->getClientOriginalName(),
-                        'stored_path' => $path,
-                    ]);
-                } else {
-                    Log::warning('Invalid single photo file');
-                }
-            } else {
-                Log::warning('No photos were uploaded');
             }
 
-            // Replace photos with their stored paths in the validated data
             $validated['photos'] = $photoPaths;
+            $validated['user_id'] = $user->id;
 
-            // Remove the `photo` field from the validated data to avoid serialization issues
-            unset($validated['photo']);
-
-            // Log final validated data
-            Log::info('Final validated data passed to ClientStoreJob:', ['data' => $validated]);
-
-            // Dispatch the job
+            // Dispatch the job and fetch the client record
             ClientStoreJob::dispatchSync($validated);
+            $client = Client::where('email', $validated['email'])->latest('id')->first();
+
+            // Log the response data
+            Log::info('Response data:', [
+                'id' => $client->id,
+                'data' => $validated,
+            ]);
 
             return $this->successResponse('Client created successfully', [
+                'id' => $client->id,
                 'data' => $validated,
+            ]);
+        });
+    }
+
+
+
+
+
+
+    public function show(Client $client)
+    {
+        return $this->safeCall(function () use ($client) {
+            return $this->successResponse('Client fetched successfully', [
+                'data' => $client,
             ]);
         });
     }

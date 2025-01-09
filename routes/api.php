@@ -2,9 +2,11 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TestController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\WorkerController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\WorkerSearchController;
 
@@ -26,7 +28,16 @@ Route::group([
 ], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    Route::get('/clients', [ClientController::class, 'index']);
     Route::post('/clients/store', [ClientController::class, 'store']);
+    Route::get('/clients/{client}', [ClientController::class, 'show']);
 
     Route::post('/workers/store', [WorkerController::class, 'store']);
+
+    Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
+    Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
+    Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
 });
+
+Route::get('/test-log/{client}', [TestController::class, 'testLog']);
+
