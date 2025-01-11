@@ -63,4 +63,18 @@ class User extends Authenticatable implements JWTSubject
             'is_admin' => $this->is_admin,
         ];
     }
+
+    public function bookedServices()
+    {
+        return $this->hasMany(Service::class, 'client_id');
+    }
+
+    /**
+     * Relationship: User can provide many services as a worker.
+     */
+    public function providedServices()
+    {
+        return $this->hasMany(Service::class, 'worker_id');
+    }
+
 }

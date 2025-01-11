@@ -58,36 +58,36 @@ class AuthController extends Controller
 
 
     public function login(LoginRequest $request)
-{
-    return $this->safeCall(function () use ($request) {
-        $validated = $request->validated();
+    {
+        return $this->safeCall(function () use ($request) {
+            $validated = $request->validated();
 
-        if (!$validated) {
-            return $this->errorResponse('Validation error', 422);
-        }
+            if (!$validated) {
+                return $this->errorResponse('Validation error', 422);
+            }
 
-        $data = $request->only(['email', 'password']);
+            $data = $request->only(['email', 'password']);
 
-        // Dispatch the LoginJob to handle login validation
-        $result = LoginJob::dispatchSync($data); // Now we return the result from LoginJob
+            // Dispatch the LoginJob to handle login validation
+            $result = LoginJob::dispatchSync($data); // Now we return the result from LoginJob
 
-        // If the job returns an error, handle it
-        if (!$result['status']) {
-            return $this->errorResponse($result['message'], $result['code']);
-        }
+            // If the job returns an error, handle it
+            if (!$result['status']) {
+                return $this->errorResponse($result['message'], $result['code']);
+            }
 
-        $user = $result['user'];
-        $token = JWTAuth::fromUser($user);
-        $cookie = cookie('jwt', $token, 60 * 24); // 1 day
+            $user = $result['user'];
+            $token = JWTAuth::fromUser($user);
+            $cookie = cookie('jwt', $token, 60 * 24); // 1 day
 
-        return response()->json([
-            'status' => true,
-            'message' => 'User logged in successfully',
-            'user' => $user,
-            'token' => $token,
-        ])->cookie($cookie);
-    });
-}
+            return response()->json([
+                'status' => true,
+                'message' => 'User logged in successfully',
+                'user' => $user,
+                'token' => $token,
+            ])->cookie($cookie);
+        });
+    }
 
 
     public function logout()

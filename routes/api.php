@@ -9,6 +9,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\WorkerSearchController;
+use App\Http\Controllers\Service\ServiceController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -31,6 +32,8 @@ Route::group([
     Route::get('/clients', [ClientController::class, 'index']);
     Route::post('/clients/store', [ClientController::class, 'store']);
     Route::get('/clients/{client}', [ClientController::class, 'show']);
+
+    Route::post('/book-service', [ServiceController::class, 'bookService']);
 
     Route::post('/workers/store', [WorkerController::class, 'store']);
 

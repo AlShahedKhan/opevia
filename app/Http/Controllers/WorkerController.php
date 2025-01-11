@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Worker;
 use App\Traits\HandlesApiResponse;
 use App\Jobs\Worker\WorkerStoreJob;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\Service\BookServiceJob;
+use App\Jobs\Worker\GetAllWorkerJob;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Worker\WorkerStoreRequest;
-use App\Jobs\Worker\GetAllWorkerJob;
-use App\Models\Worker;
 
 class WorkerController extends Controller
 {
@@ -28,6 +29,9 @@ class WorkerController extends Controller
             ]);
         });
     }
+
+
+
 
     /**
      * Create a new worker.

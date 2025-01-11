@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Client extends Model
 {
+    use HasFactory;
+
     protected $table = 'clients';
 
     protected $fillable = [
@@ -40,5 +43,10 @@ class Client extends Model
     public function worker()
     {
         return $this->belongsTo(Worker::class, 'worker_id');
+    }
+
+    public function services()
+    {
+        return $this->hasMany(Service::class);
     }
 }

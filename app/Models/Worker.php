@@ -35,4 +35,9 @@ class Worker extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function service()
+    {
+        return $this->hasMany(Service::class);
+    }
 }
