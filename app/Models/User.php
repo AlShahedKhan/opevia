@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use App\Models\Service;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -75,6 +76,16 @@ class User extends Authenticatable implements JWTSubject
     public function providedServices()
     {
         return $this->hasMany(Service::class, 'worker_id');
+    }
+
+    public function givenRatings()
+    {
+        return $this->hasMany(Rating::class, 'client_id');
+    }
+
+    public function receivedRatings()
+    {
+        return $this->hasMany(Rating::class, 'worker_id');
     }
 
 }

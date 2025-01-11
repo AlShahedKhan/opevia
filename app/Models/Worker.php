@@ -40,4 +40,9 @@ class Worker extends Model
     {
         return $this->hasMany(Service::class);
     }
+
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class, 'worker_id');
+    }
 }
