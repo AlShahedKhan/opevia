@@ -2,70 +2,86 @@
 
 namespace App\Http\Controllers;
 
-use Stripe\Stripe;
 use App\Models\Client;
 use App\Models\Worker;
-use Stripe\PaymentIntent;
+use App\Models\Payment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use App\Notifications\PaymentHeldNotification;
-use App\Notifications\PaymentReceivedNotification;
-use App\Notifications\PaymentReleasedNotification;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\HandlesApiResponse;
 
 class PaymentController extends Controller
 {
+    use HandlesApiResponse;
+
+    public function index()
+    {
+        return $this->safeCall(function () {
+            $user = Auth::user();
+
+            // Check if the user is an admin
+            if (!$user || !$user->is_admin) {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            $payments = Payment::with(['client', 'worker'])->get();
+            return $this->successResponse('Payments fetched successfully', [
+                'data' => $payments,
+            ]);
+        });
+    }
+
     /**
      * Create a PaymentIntent and hold funds in escrow.
      */
-    public function createPaymentIntent(Client $client)
+    public function createPaymentIntent(Request $request, Client $client)
     {
-        Log::info('Creating PaymentIntent - Request received');
+        return $this->safeCall(function () use ($request, $client) {
+            // Validate the request
+            $request->validate([
+                'worker_id' => 'required|exists:workers,id', // Ensure worker_id is valid
+            ]);
 
-        // Check if the client exists
-        if (!$client) {
-            Log::error("Client not found: {$client->id}");
-            return response()->json(['message' => 'Client not found.'], 404);
-        }
+            $workerId = $request->input('worker_id');
 
-        Log::info("Received Client ID: {$client->id}, Amount: {$client->amount}");
+            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
 
-        // Set Stripe API key
-        Stripe::setApiKey(env('STRIPE_SECRET'));
+            // Create a Stripe Customer
+            $stripeCustomer = \Stripe\Customer::create([
+                'name' => $client->full_name,
+                'email' => $client->email,
+            ]);
 
-        try {
             // Create a PaymentIntent
-            $paymentIntent = PaymentIntent::create([
-                'amount' => $client->amount * 100, // Convert to cents
+            $paymentIntent = \Stripe\PaymentIntent::create([
+                'amount' => $client->amount * 100, // Convert amount to cents
                 'currency' => 'usd',
                 'payment_method_types' => ['card'],
-                'capture_method' => 'manual', // Manual capture to hold funds
+                'capture_method' => 'manual',
+                'customer' => $stripeCustomer->id,
             ]);
 
-            Log::info("Stripe PaymentIntent created successfully: {$paymentIntent->id}");
-
-            // Save PaymentIntent ID to the database
+            // Save the PaymentIntent ID to the client record
             $client->payment_intent_id = $paymentIntent->id;
-            $client->save();
-
-            // Notify the worker that payment is held in escrow
-            $worker = $client->user->worker; // Fetch the associated worker
-            if ($worker) {
-                Log::info("Notifying Worker ID: {$worker->id} about held payment.");
-                $worker->notify(new PaymentHeldNotification($client));
+            if (!$client->save()) {
+                return $this->errorResponse('Failed to save PaymentIntent ID.', 500);
             }
 
-            // Return the client secret and payment intent ID to the client
-            return response()->json([
-                'message' => 'Payment Intent created successfully',
-                'data' => [
-                    'payment_intent_id' => $paymentIntent->id,
-                    'client_secret' => $paymentIntent->client_secret,
-                ],
+            // Save payment details in the payments table
+            Payment::create([
+                'payment_intent_id' => $paymentIntent->id,
+                'client_id' => $client->id,
+                'worker_id' => $workerId, // Save the worker_id here
+                'amount' => $paymentIntent->amount,
+                'currency' => $paymentIntent->currency,
+                'customer' => $client->full_name,
+                'payment_date' => now(),
             ]);
-        } catch (\Exception $e) {
-            Log::error("Error creating PaymentIntent for Client ID: {$client->id}, Error: {$e->getMessage()}");
-            return response()->json(['message' => 'Error creating payment intent: ' . $e->getMessage()], 500);
-        }
+
+            return $this->successResponse('Payment Intent created successfully', [
+                'payment_intent_id' => $paymentIntent->id,
+                'client_secret' => $paymentIntent->client_secret,
+            ]);
+        });
     }
 
     /**
@@ -73,46 +89,51 @@ class PaymentController extends Controller
      */
     public function confirmPaymentIntent(Request $request, Client $client)
     {
-        Log::info("Confirming PaymentIntent for Client ID: {$client->id}");
+        return $this->safeCall(function () use ($request, $client) {
+            if (!$client) {
+                return $this->errorResponse('Client not found.', 404);
+            }
 
-        // Check if the client exists
-        if (!$client) {
-            Log::error("Client not found: {$client->id}");
-            return response()->json(['message' => 'Client not found.'], 404);
-        }
+            if (!$client->payment_intent_id) {
+                return $this->errorResponse('No PaymentIntent ID found for this client.', 400);
+            }
 
-        Stripe::setApiKey(env('STRIPE_SECRET'));
+            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
 
-        try {
             // Retrieve the PaymentIntent
-            $paymentIntent = PaymentIntent::retrieve($client->payment_intent_id);
+            $paymentIntent = \Stripe\PaymentIntent::retrieve($client->payment_intent_id);
 
-            // Attach a payment method (replace with your valid payment method ID)
-            $paymentIntent->payment_method = $request->input('payment_method_id');
+            // Attach a payment method
+            $paymentMethodId = $request->input('payment_method_id');
+            if (!$paymentMethodId) {
+                return $this->errorResponse('Payment method ID is required.', 400);
+            }
+
+            $paymentIntent->payment_method = $paymentMethodId;
             $paymentIntent->save();
 
             // Confirm the PaymentIntent
             $paymentIntent->confirm();
 
-            // Ensure the PaymentIntent is now in "requires_capture" status
+            // Check PaymentIntent status
             if ($paymentIntent->status !== 'requires_capture') {
-                Log::error("PaymentIntent confirmation failed. Status: {$paymentIntent->status}");
-                return response()->json(['message' => 'Payment confirmation failed.'], 400);
+                return $this->errorResponse('Payment confirmation failed.', 400);
             }
 
-            Log::info("PaymentIntent confirmed successfully: {$paymentIntent->id}");
+            // Update the database with payment method and status
+            $payment = Payment::where('payment_intent_id', $client->payment_intent_id)->first();
+            if ($payment) {
+                $payment->update([
+                    'payment_method' => $paymentIntent->payment_method,
+                    'payment_date' => now(),
+                ]);
+            }
 
-            return response()->json([
-                'message' => 'Payment confirmed successfully',
-                'data' => [
-                    'payment_intent_id' => $paymentIntent->id,
-                    'status' => $paymentIntent->status,
-                ],
+            return $this->successResponse('Payment confirmed successfully', [
+                'payment_intent_id' => $paymentIntent->id,
+                'status' => $paymentIntent->status,
             ]);
-        } catch (\Exception $e) {
-            Log::error("Error confirming PaymentIntent for Client ID: {$client->id}, Error: {$e->getMessage()}");
-            return response()->json(['message' => 'Error confirming payment intent: ' . $e->getMessage()], 500);
-        }
+        });
     }
 
     /**
@@ -120,118 +141,58 @@ class PaymentController extends Controller
      */
     public function releasePayment(Request $request, Client $client)
     {
-        Log::info("Received request to release payment for Client ID: {$client->id}");
+        return $this->safeCall(function () use ($request, $client) {
+            if (!$client) {
+                return $this->errorResponse('Client not found.', 404);
+            }
 
-        // Check if the client exists
-        if (!$client) {
-            Log::error("Client not found: {$client->id}");
-            return response()->json(['message' => 'Client not found.'], 404);
-        }
+            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
 
-        // Fetch and log user and worker information
-        $clientUser = $client->user ?? null;
-        $worker = $client->worker ?? null; // Fetch worker via the 'worker_id' relation
+            $paymentIntent = \Stripe\PaymentIntent::retrieve($client->payment_intent_id);
 
-        if (!$worker) {
-            Log::warning("Worker not found for Client ID: {$client->id}");
-            return response()->json(['message' => 'Worker not found.'], 404);
-        }
-
-        Log::info("Client User ID: " . optional($clientUser)->id);
-        Log::info("Worker ID: " . optional($worker)->id);
-
-        Stripe::setApiKey(env('STRIPE_SECRET'));
-
-        try {
-            // Retrieve the PaymentIntent
-            $paymentIntent = PaymentIntent::retrieve($client->payment_intent_id);
-
-            // Check if the PaymentIntent is ready for capture
             if ($paymentIntent->status !== 'requires_capture') {
-                Log::error("PaymentIntent is not ready for capture. Status: {$paymentIntent->status}");
-                return response()->json(['message' => 'PaymentIntent is not ready for capture.'], 400);
+                return $this->errorResponse('PaymentIntent is not ready for capture.', 400);
             }
 
             // Capture the PaymentIntent
             $paymentIntent->capture();
-            Log::info("PaymentIntent captured successfully: {$paymentIntent->id}");
 
-            // Notify the worker
-            Log::info("Notifying Worker ID: {$worker->id} that payment is released.");
-            $worker->notify(new PaymentReleasedNotification($client));
+            // Update the payment details in the database
+            $payment = Payment::where('payment_intent_id', $client->payment_intent_id)->first();
+            $payment->update([
+                'payment_method' => $paymentIntent->payment_method, // Stripe payment method ID
+            ]);
 
-            // Notify the client
-            if ($clientUser) {
-                Log::info("Notifying Client ID: {$clientUser->id} that worker received payment.");
-                $clientUser->notify(new PaymentReceivedNotification($worker));
-            } else {
-                Log::warning("User not found for Client ID: {$client->id}");
-            }
-
-            return response()->json(['message' => 'Payment released successfully']);
-        } catch (\Exception $e) {
-            Log::error("Error releasing payment for Client ID: {$client->id}, Error: {$e->getMessage()}");
-            return response()->json(['message' => 'Error releasing payment: ' . $e->getMessage()], 500);
-        }
+            return $this->successResponse('Payment released successfully');
+        });
     }
 
+    /**
+     * Refund a PaymentIntent for a worker.
+     */
+    public function refundPayment(Request $request, Worker $worker)
+    {
+        return $this->safeCall(function () use ($request, $worker) {
+            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
 
-/**
- * Refund a PaymentIntent.
- */
-/**
- * Refund a PaymentIntent for a worker.
- */
-public function refundPayment(Request $request, Worker $worker)
-{
-    Log::info("Processing refund request for Worker ID: {$worker->id}");
+            $request->validate([
+                'payment_intent_id' => 'required|string',
+                'refund_reason' => 'nullable|string',
+            ]);
 
-    try {
-        // Validate the request
-        $request->validate([
-            'payment_intent_id' => 'required|string', // PaymentIntent ID
-            'amount' => 'nullable|numeric|min:1', // Optional: Amount in cents
-        ]);
+            $paymentIntent = \Stripe\PaymentIntent::retrieve($request->payment_intent_id);
 
-        // Set Stripe API key
-        \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
+            $refund = \Stripe\Refund::create([
+                'payment_intent' => $request->payment_intent_id,
+            ]);
 
-        // Retrieve the PaymentIntent to ensure it exists
-        $paymentIntent = \Stripe\PaymentIntent::retrieve($request->payment_intent_id);
+            $payment = Payment::where('payment_intent_id', $request->payment_intent_id)->first();
+            $payment->update([
+                'refund_date' => now(),
+                'refund_reason' => $request->refund_reason,
+            ]);
 
-        if (!$paymentIntent) {
-            Log::error("PaymentIntent not found: {$request->payment_intent_id}");
-            return response()->json(['message' => 'PaymentIntent not found.'], 404);
-        }
-
-        Log::info("Refunding PaymentIntent ID: {$request->payment_intent_id} for Worker ID: {$worker->id}");
-
-        // Create a refund
-        $refund = \Stripe\Refund::create([
-            'payment_intent' => $request->payment_intent_id,
-            'amount' => $request->has('amount') ? $request->amount * 100 : null, // Refund full amount if 'amount' is not provided
-        ]);
-
-        // Log successful refund
-        Log::info("Refund processed successfully for PaymentIntent ID: {$request->payment_intent_id}");
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Refund processed successfully.',
-            'refund' => $refund,
-        ], 200);
-    } catch (\Exception $e) {
-        // Log the error
-        Log::error("Error processing refund for Worker ID: {$worker->id}, PaymentIntent ID: {$request->payment_intent_id}, Error: {$e->getMessage()}");
-
-        return response()->json([
-            'status' => false,
-            'message' => 'Refund processing failed.',
-            'error' => $e->getMessage(),
-        ], 500);
+            return $this->successResponse('Refund processed successfully');
+        });
     }
-}
-
-
-
 }

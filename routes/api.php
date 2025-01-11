@@ -34,6 +34,7 @@ Route::group([
 
     Route::post('/workers/store', [WorkerController::class, 'store']);
 
+    Route::get('/payments', [PaymentController::class, 'index']);
     Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
     Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
     Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
