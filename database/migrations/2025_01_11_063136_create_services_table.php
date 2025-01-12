@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('client_id');
             $table->unsignedBigInteger('worker_id');
+            $table->unsignedBigInteger('client_work_req_id');
             $table->foreign('client_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('worker_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('client_work_req_id')->references('id')->on('clients')->onDelete('cascade');
             $table->timestamps();
         });
 

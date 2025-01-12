@@ -9,6 +9,7 @@ class Service extends Model
     protected $fillable = [
         'client_id',
         'worker_id',
+        'client_work_req_id'
     ];
 
     public function client()
@@ -21,4 +22,8 @@ class Service extends Model
         return $this->belongsTo(User::class, 'worker_id');
     }
 
+    public function clientWorkRequest()
+    {
+        return $this->belongsTo(Client::class, 'client_work_req_id');
+    }
 }

@@ -31,14 +31,18 @@ class BookServiceJob implements ShouldQueue
         $request->validate([
             'client_id' => 'required|exists:users,id',
             'worker_id' => 'required|exists:users,id',
+            'client_work_req_id' => 'required|exists:clients,id',
         ]);
 
         $clientId = $request->input('client_id');
         $workerId = $request->input('worker_id');
+        $clientWorkReqId = $request->input('client_work_req_id');
 
         $service = Service::create([
             'client_id' => $clientId,
             'worker_id' => $workerId,
+            'client_work_req_id' => $clientWorkReqId,
+
         ]);
 
         return $service;
