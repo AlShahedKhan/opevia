@@ -28,7 +28,6 @@ class ServiceController extends Controller
                 return $this->errorResponse('Unauthorized access', 403);
             }
 
-            // Fetch services where the worker_id matches the authenticated user's ID
             $services = Service::where('worker_id', $user->id)
             ->with('client')->get();
             return $this->successResponse('Services fetched successfully', [
@@ -108,6 +107,25 @@ class ServiceController extends Controller
             $service->update(['status' => 'completed']);
             return $this->successResponse('Service successfully completed.', [
                 'service_id' => $service->id,
+            ]);
+        });
+    }
+
+    public function show(Service $service)
+    {
+        return $this->safeCall(function () use ($service) {
+            $user = Auth::user();
+
+            // Check if the authenticated user's ID matches the worker_id
+            if ($user->id !== $service->worker_id) {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Load the related client data
+            $service->load('client');
+
+            return $this->successResponse('Service fetched successfully', [
+                'data' => $service,
             ]);
         });
     }
