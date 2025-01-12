@@ -16,7 +16,8 @@ class UserSeeder extends Seeder
     {
         // Create worker account
         User::create([
-            'name' => 'Worker User',
+            'first_name' => 'Worker ',
+            'last_name' => ' User',
             'email' => 'test1@test.com',
             'password' => Hash::make('12345678'),
             'role' => 'worker',
@@ -24,7 +25,8 @@ class UserSeeder extends Seeder
 
         // Create client account
         User::create([
-            'name' => 'Client User',
+            'first_name' => 'Client ',
+            'last_name' => ' User',
             'email' => 'test2@test.com',
             'password' => Hash::make('12345678'),
             'role' => 'client',

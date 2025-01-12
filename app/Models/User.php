@@ -13,18 +13,27 @@ class User extends Authenticatable implements JWTSubject
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'name',       // User Name
-        'email',      // Email Address
-        'password',   // Password
-        'role',       // Role: 'client' or 'worker'
-        'is_admin',   // Admin flag
+        'image',                // Profile image
+        'first_name',           // First name
+        'last_name',            // Last name
+        'email',                // Email address
+        'phone',                // Phone number
+        'location',             // Location
+        'service_type',         // Type of service offered
+        'work_experience',      // Work experience
+        'describe_yourself',    // Self-description
+        'password',             // Password
+        'role',                 // Role: 'client' or 'worker'
+        'is_admin',             // Admin flag
     ];
 
+    // Hidden attributes for arrays
     protected $hidden = [
         'password',         // Hide password
         'remember_token',   // Hide remember token
     ];
 
+    // Attribute casting
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
@@ -65,6 +74,9 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
+    /**
+     * Relationship: User can book many services as a client.
+     */
     public function bookedServices()
     {
         return $this->hasMany(Service::class, 'client_id');
@@ -78,14 +90,19 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Service::class, 'worker_id');
     }
 
+    /**
+     * Relationship: User can give ratings as a client.
+     */
     public function givenRatings()
     {
         return $this->hasMany(Rating::class, 'client_id');
     }
 
+    /**
+     * Relationship: User can receive ratings as a worker.
+     */
     public function receivedRatings()
     {
         return $this->hasMany(Rating::class, 'worker_id');
     }
-
 }

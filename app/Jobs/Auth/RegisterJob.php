@@ -31,7 +31,8 @@ class RegisterJob implements ShouldQueue
             Log::info('RegisterJob started', ['data' => $this->data]);
 
             User::create([
-                'name' => $this->data['name'],
+                'first_name' => $this->data['first_name'],
+                'last_name' => $this->data['last_name'],
                 'email' => $this->data['email'],
                 'password' => Hash::make($this->data['password']),
                 'role' => $this->data['role'],

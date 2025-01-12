@@ -29,6 +29,11 @@ Route::group([
     "middleware" => "auth:api"
 ], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::put('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
+    Route::post('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
+    Route::post('/client-profile', [AuthController::class, 'ClientProfileUpdate'])->name('client-profile.update');
+
+
 
     Route::get('/clients', [ClientController::class, 'index']);
     Route::post('/clients/store', [ClientController::class, 'store']);

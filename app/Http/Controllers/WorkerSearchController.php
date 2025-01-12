@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Worker;
+use App\Models\Rating;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class WorkerSearchController extends Controller
 {
     /**
-     * Search for workers based on query parameters.
+     * Search for workers based on query parameters and include their ratings.
      */
     public function search(Request $request)
     {
@@ -40,11 +39,18 @@ class WorkerSearchController extends Controller
             ->when($serviceType, function ($q) use ($serviceType) {
                 $q->where('service_type', 'LIKE', "%{$serviceType}%");
             })
-            ->orderByRaw("CASE
-                WHEN service_type = ? THEN 1
-                ELSE 2
-            END", [$serviceType])
             ->paginate(10);
+
+        // Add ratings for each worker
+        $workers->getCollection()->transform(function ($worker) {
+            // Fetch ratings for the current worker based on their ID (work_id)
+            $ratings = Rating::where('work_id', $worker->id)->pluck('rating');
+
+            // Add the ratings to the worker object
+            $worker->ratings = $ratings;
+
+            return $worker;
+        });
 
         // Return results
         return response()->json([
