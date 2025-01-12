@@ -21,6 +21,7 @@ class RatingController extends Controller
             'work_id' => 'required|exists:workers,id',
             'worker_id' => 'required|exists:users,id',
             'rating' => 'required|integer|min:1|max:5',
+            'feedback' => 'nullable|string'
         ]);
 
         // Using safeCall to handle potential errors
@@ -33,7 +34,8 @@ class RatingController extends Controller
                 ],
                 [
                     'worker_id' => $validated['worker_id'],
-                    'rating' => $validated['rating']
+                    'rating' => $validated['rating'],
+                    'feedback' => $validated['feedback']
                 ]
             );
             // Return success response

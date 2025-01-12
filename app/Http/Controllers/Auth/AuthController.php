@@ -23,6 +23,7 @@ use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\ForgetPasswordRequest;
 use App\Http\Requests\Auth\ClientProfileUpdateRequest;
 use App\Http\Requests\Auth\WorkerProfileUpdateRequest;
+use App\Models\Rating;
 
 class AuthController extends Controller
 {
@@ -222,6 +223,36 @@ class AuthController extends Controller
             // Return the response
             return $this->successResponse('Profile updated successfully.', [
                 'user' => $user->fresh(), // Return the updated user instance
+            ]);
+        });
+    }
+
+    public function GetWorkerProfile()
+    {
+        return $this->safeCall(function () {
+            // Get the authenticated user
+            $user = Auth::user();
+
+            // Check if the user's role is not 'worker'
+            if ($user->role !== 'worker') {
+                return $this->errorResponse('Access denied. Only workers can access their profiles.', 403);
+            }
+
+            // Fetch feedback and ratings for the worker
+            $feedbackRating = Rating::where('worker_id', $user->id)
+                ->get(['feedback', 'rating'])
+                ->map(function ($rating) {
+                    return [
+                        'feedback' => $rating->feedback,
+                        'rating' => $rating->rating,
+                    ];
+                });
+
+            // $feedbackRating = Rating::where('worker_id', $user->id)->avg('rating');
+            // Return the worker profile
+            return $this->successResponse('Worker profile retrieved successfully.', [
+                'user' => $user->fresh(), // Return the latest user data
+                'feedbackRating' => $feedbackRating
             ]);
         });
     }

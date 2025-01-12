@@ -10,7 +10,8 @@ class Rating extends Model
         'work_id',
         'worker_id',
         'client_id',
-        'rating'
+        'rating',
+        'feedback'
     ];
 
 

@@ -33,6 +33,8 @@ Route::group([
     Route::post('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
     Route::post('/client-profile', [AuthController::class, 'ClientProfileUpdate'])->name('client-profile.update');
 
+    Route::get('/get-worker-profile', [AuthController::class, 'GetWorkerProfile']);
+
 
 
     Route::get('/clients', [ClientController::class, 'index']);

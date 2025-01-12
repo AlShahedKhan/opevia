@@ -17,6 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('client_id');
             $table->unsignedBigInteger('worker_id');
             $table->tinyInteger('rating')->unsigned();
+            $table->string('feedback')->nullable();
             $table->timestamps();
 
             // Foreign keys pointing to the users table
