@@ -9,7 +9,8 @@ class Service extends Model
     protected $fillable = [
         'client_id',
         'worker_id',
-        'client_work_req_id'
+        'client_work_req_id',
+        'status',
     ];
 
     public function client()

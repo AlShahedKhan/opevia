@@ -16,6 +16,27 @@ class ServiceController extends Controller
     use HandlesApiResponse;
 
     /**
+     * Fetch all services.
+     */
+    public function index()
+    {
+        return $this->safeCall(function () {
+            $user = Auth::user();
+
+            // Check if the user has the role of 'worker'
+            if (!$user || $user->role !== 'worker') {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Fetch services where the worker_id matches the authenticated user's ID
+            $services = Service::where('worker_id', $user->id)
+            ->with('client')->get();
+            return $this->successResponse('Services fetched successfully', [
+                'data' => $services,
+            ]);
+        });
+    }
+    /**
      * Book a service.
      */
     public function bookService()
@@ -34,6 +55,60 @@ class ServiceController extends Controller
             return $this->successResponse('Service successfully booked.', [
                 'service_id' => $service->id,
             ], 201);
+        });
+    }
+
+    public function acceptService(Service $service)
+    {
+        return $this->safeCall(function () use ($service) {
+            $user = Auth::user();
+
+            // Check if the authenticated user's ID matches the worker_id
+            if ($user->id !== $service->worker_id) {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            $service->update(['status' => 'processing']);
+            return $this->successResponse('Service successfully accepted.', [
+                'service_id' => $service->id,
+            ]);
+        });
+    }
+
+    /**
+     * Cancel a service.
+     */
+    public function cancelService(Service $service)
+    {
+        return $this->safeCall(function () use ($service) {
+            $user = Auth::user();
+
+            // Check if the authenticated user's ID matches the worker_id
+            if ($user->id !== $service->worker_id) {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            $service->update(['status' => 'canceled']);
+            return $this->successResponse('Service successfully canceled.', [
+                'service_id' => $service->id,
+            ]);
+        });
+    }
+
+    public function completeService(Service $service)
+    {
+        return $this->safeCall(function () use ($service) {
+            $user = Auth::user();
+
+            // Check if the authenticated user's ID matches the worker_id
+            if ($user->id !== $service->worker_id) {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            $service->update(['status' => 'completed']);
+            return $this->successResponse('Service successfully completed.', [
+                'service_id' => $service->id,
+            ]);
         });
     }
 }

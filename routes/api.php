@@ -41,7 +41,16 @@ Route::group([
     Route::post('/clients/store', [ClientController::class, 'store']);
     Route::get('/clients/{client}', [ClientController::class, 'show']);
 
+    Route::get('/services', [ServiceController::class, 'index']);
     Route::post('/book-service', [ServiceController::class, 'bookService']);
+    // Route to accept a service
+    Route::post('/services/{service}/accept', [ServiceController::class, 'acceptService']);
+
+    // Route to cancel a service
+    Route::post('/services/{service}/cancel', [ServiceController::class, 'cancelService']);
+
+    // Route to complete a service
+    Route::post('/services/{service}/complete', [ServiceController::class, 'completeService']);
 
     Route::post('/workers/store', [WorkerController::class, 'store']);
 
@@ -54,8 +63,6 @@ Route::group([
     Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
     Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
     Route::post('/refund-payment/{workers}', [PaymentController::class, 'refundPayment']);
-
 });
 
 Route::get('/test-log/{client}', [TestController::class, 'testLog']);
-

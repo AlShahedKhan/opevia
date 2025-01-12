@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('client_id');
             $table->unsignedBigInteger('worker_id');
             $table->unsignedBigInteger('client_work_req_id');
+            $table->enum('status', ['pending', 'accepted', 'canceled', 'completed','processing'])->default('pending');
             $table->foreign('client_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('worker_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('client_work_req_id')->references('id')->on('clients')->onDelete('cascade');

@@ -42,7 +42,7 @@ class BookServiceJob implements ShouldQueue
             'client_id' => $clientId,
             'worker_id' => $workerId,
             'client_work_req_id' => $clientWorkReqId,
-
+            'status' => 'pending', // Default status
         ]);
 
         return $service;
