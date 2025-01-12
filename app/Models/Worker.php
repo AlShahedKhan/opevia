@@ -43,6 +43,6 @@ class Worker extends Model
 
     public function ratings()
     {
-        return $this->hasMany(Rating::class, 'worker_id');
+        return $this->hasMany(Rating::class, 'work_id');
     }
 }

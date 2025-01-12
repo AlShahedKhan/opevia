@@ -39,6 +39,8 @@ Route::group([
     Route::post('/workers/store', [WorkerController::class, 'store']);
 
     Route::post('/ratings', [RatingController::class, 'store'])->name('ratings.store');
+    Route::get('ratings/worker/{worker_id}/average', [RatingController::class, 'getAverageRating']);
+
 
     Route::get('/payments', [PaymentController::class, 'index']);
     Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
