@@ -154,13 +154,6 @@ class ServiceController extends Controller
         });
     }
 
-
-
-
-
-
-
-
     public function cancelService(Service $service)
     {
         return $this->safeCall(function () use ($service) {
@@ -251,7 +244,69 @@ class ServiceController extends Controller
         });
     }
 
+    public function refundPayment(Request $request, Service $service)
+    {
+        return $this->safeCall(function () use ($request, $service) {
+            $user = Auth::user();
 
+            // Ensure the authenticated user is either the worker or client associated with the service
+            if ($user->id !== $service->worker_id && $user->id !== $service->client_id) {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Validate the request
+            $request->validate([
+                'payment_intent_id' => 'required|string',
+                'refund_reason' => 'nullable|string',
+            ]);
+
+            // Retrieve the payment intent ID from the service to ensure it's accurate
+            $paymentIntentId = $service->payment_intent_id;
+            if ($paymentIntentId !== $request->payment_intent_id) {
+                return $this->errorResponse('Invalid PaymentIntent ID.', 400);
+            }
+
+            // Set up Stripe API with the secret key
+            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            // Retrieve the PaymentIntent to confirm its existence
+            try {
+                $paymentIntent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
+            } catch (\Exception $e) {
+                return $this->errorResponse('Error retrieving PaymentIntent: ' . $e->getMessage(), 500);
+            }
+
+            // Create a refund for the PaymentIntent
+            try {
+                $refund = \Stripe\Refund::create([
+                    'payment_intent' => $paymentIntentId,
+                    'reason' => $request->refund_reason ?? 'requested_by_customer',
+                ]);
+            } catch (\Exception $e) {
+                return $this->errorResponse('Error processing refund: ' . $e->getMessage(), 500);
+            }
+
+            // Update the payment record in the database
+            $payment = Payment::where('payment_intent_id', $paymentIntentId)->first();
+            if ($payment) {
+                $payment->update([
+                    'refund_date' => now(),
+                    'refund_reason' => $request->refund_reason,
+                    'refund_status' => 'refunded',
+                ]);
+            }
+
+            // Update the service status to 'refunded'
+            $service->update(['status' => 'refunded']);
+
+            return $this->successResponse('Refund processed successfully.', [
+                'service_id' => $service->id,
+                'refund_id' => $refund->id,
+                'payment_intent_id' => $paymentIntentId,
+                'refund_status' => $refund->status,
+            ]);
+        });
+    }
 
     public function show(Service $service)
     {

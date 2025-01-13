@@ -31,34 +31,7 @@ class PaymentController extends Controller
     }
 
 
-    public function releasePayment(Request $request, Client $client)
-    {
-        return $this->safeCall(function () use ($request, $client) {
-            if (!$client) {
-                return $this->errorResponse('Client not found.', 404);
-            }
-
-            \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
-
-            $paymentIntent = \Stripe\PaymentIntent::retrieve($client->payment_intent_id);
-
-            if ($paymentIntent->status !== 'requires_capture') {
-                return $this->errorResponse('PaymentIntent is not ready for capture.', 400);
-            }
-
-            // Capture the PaymentIntent
-            $paymentIntent->capture();
-
-            // Update the payment details in the database
-            $payment = Payment::where('payment_intent_id', $client->payment_intent_id)->first();
-            $payment->update([
-                'payment_method' => $paymentIntent->payment_method, // Stripe payment method ID
-            ]);
-
-            return $this->successResponse('Payment released successfully');
-        });
-    }
-
+  
     /**
      * Refund a PaymentIntent for a worker.
      */
