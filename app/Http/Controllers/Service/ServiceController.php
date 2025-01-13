@@ -99,8 +99,8 @@ class ServiceController extends Controller
         return $this->safeCall(function () use ($service) {
             $user = Auth::user();
 
-            // Check if the authenticated user's ID matches the worker_id
-            if ($user->id !== $service->worker_id) {
+            // Check if the authenticated user's ID matches the client_id
+            if ($user->id !== $service->client_id) {
                 return $this->errorResponse('Unauthorized access', 403);
             }
 

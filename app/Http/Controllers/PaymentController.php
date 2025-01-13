@@ -38,7 +38,7 @@ class PaymentController extends Controller
         return $this->safeCall(function () use ($request, $client) {
             // Validate the request
             $request->validate([
-                'worker_id' => 'required|exists:workers,id', // Ensure worker_id is valid
+                'worker_id' => 'required|exists:workers,id',
             ]);
 
             $workerId = $request->input('worker_id');
@@ -53,7 +53,7 @@ class PaymentController extends Controller
 
             // Create a PaymentIntent
             $paymentIntent = \Stripe\PaymentIntent::create([
-                'amount' => $client->amount * 100, // Convert amount to cents
+                'amount' => $client->amount * 100,
                 'currency' => 'usd',
                 'payment_method_types' => ['card'],
                 'capture_method' => 'manual',
@@ -66,11 +66,10 @@ class PaymentController extends Controller
                 return $this->errorResponse('Failed to save PaymentIntent ID.', 500);
             }
 
-            // Save payment details in the payments table
             Payment::create([
                 'payment_intent_id' => $paymentIntent->id,
                 'client_id' => $client->id,
-                'worker_id' => $workerId, // Save the worker_id here
+                'worker_id' => $workerId,
                 'amount' => $paymentIntent->amount,
                 'currency' => $paymentIntent->currency,
                 'customer' => $client->full_name,
@@ -84,9 +83,6 @@ class PaymentController extends Controller
         });
     }
 
-    /**
-     * Confirm the PaymentIntent and attach a payment method.
-     */
     public function confirmPaymentIntent(Request $request, Client $client)
     {
         return $this->safeCall(function () use ($request, $client) {
@@ -112,15 +108,12 @@ class PaymentController extends Controller
             $paymentIntent->payment_method = $paymentMethodId;
             $paymentIntent->save();
 
-            // Confirm the PaymentIntent
             $paymentIntent->confirm();
 
-            // Check PaymentIntent status
             if ($paymentIntent->status !== 'requires_capture') {
                 return $this->errorResponse('Payment confirmation failed.', 400);
             }
 
-            // Update the database with payment method and status
             $payment = Payment::where('payment_intent_id', $client->payment_intent_id)->first();
             if ($payment) {
                 $payment->update([
@@ -136,9 +129,7 @@ class PaymentController extends Controller
         });
     }
 
-    /**
-     * Release payment to the worker.
-     */
+
     public function releasePayment(Request $request, Client $client)
     {
         return $this->safeCall(function () use ($request, $client) {

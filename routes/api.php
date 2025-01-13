@@ -31,6 +31,7 @@ Route::group([
     Route::post('/logout', [AuthController::class, 'logout']);
     // Route::put('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
     Route::post('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
+    
     Route::post('/client-profile', [AuthController::class, 'ClientProfileUpdate'])->name('client-profile.update');
 
     Route::get('/get-worker-profile', [AuthController::class, 'GetWorkerProfile']);
@@ -68,9 +69,13 @@ Route::group([
 
 
     Route::get('/payments', [PaymentController::class, 'index']);
+
     Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
+
     Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
+
     Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
+
     Route::post('/refund-payment/{workers}', [PaymentController::class, 'refundPayment']);
 });
 
