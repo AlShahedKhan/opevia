@@ -13,11 +13,14 @@ class Service extends Model
         'status',
     ];
 
+    // public function client()
+    // {
+    //     return $this->belongsTo(User::class, 'client_id');
+    // }
     public function client()
     {
-        return $this->belongsTo(User::class, 'client_id');
+        return $this->belongsTo(Client::class, 'client_id');
     }
-
     public function worker()
     {
         return $this->belongsTo(User::class, 'worker_id');

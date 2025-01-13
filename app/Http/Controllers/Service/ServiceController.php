@@ -129,4 +129,57 @@ class ServiceController extends Controller
             ]);
         });
     }
+
+    public function pendingServices(){
+        return $this->safeCall(function () {
+            $user = Auth::user();
+
+            // Check if the user has the role of 'worker'
+            if (!$user || $user->role !== 'worker') {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Fetch pending services where the worker_id matches the authenticated user's ID and include related client data
+            $services = Service::where('worker_id', $user->id)
+                ->where('status', 'pending')
+                ->with('client')
+                ->get();
+
+            if ($services->isEmpty()) {
+                return $this->successResponse('No pending services found.', [
+                    'data' => [],
+                ]);
+            }
+
+            return $this->successResponse('Pending services fetched successfully', [
+                'data' => $services,
+            ]);
+        });
+    }
+    public function completedServices(){
+        return $this->safeCall(function () {
+            $user = Auth::user();
+
+            // Check if the user has the role of 'worker'
+            if (!$user || $user->role !== 'worker') {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Fetch pending services where the worker_id matches the authenticated user's ID and include related client data
+            $services = Service::where('worker_id', $user->id)
+                ->where('status', 'completed')
+                ->with('client')
+                ->get();
+
+            if ($services->isEmpty()) {
+                return $this->successResponse('No completed services found.', [
+                    'data' => [],
+                ]);
+            }
+
+            return $this->successResponse('Completed services fetched successfully', [
+                'data' => $services,
+            ]);
+        });
+    }
 }

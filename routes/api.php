@@ -51,7 +51,11 @@ Route::group([
 
     // Route to complete a service
     Route::post('/services/{service}/complete', [ServiceController::class, 'completeService']);
-    Route::get('/services/{service}', [ServiceController::class, 'show']);
+
+    Route::get('services/pending' , [ServiceController::class, 'pendingServices']);
+
+    Route::get('services/completed' , [ServiceController::class, 'completedServices']);
+
 
     Route::post('/workers/store', [WorkerController::class, 'store']);
 
