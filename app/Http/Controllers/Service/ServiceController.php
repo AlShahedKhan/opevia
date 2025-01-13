@@ -289,4 +289,32 @@ class ServiceController extends Controller
             ]);
         });
     }
+
+    public function clientCompletedServices()
+    {
+        return $this->safeCall(function () {
+            $user = Auth::user();
+
+            // Check if the user has the role of 'client'
+            if (!$user || $user->role !== 'client') {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Fetch pending services where the client_id matches the authenticated user's ID and include related client data
+            $services = Service::where('client_id', $user->id)
+                ->where('status', 'completed')
+                ->with('clientWorkRequest')
+                ->get();
+
+            if ($services->isEmpty()) {
+                return $this->successResponse('No completed services found.', [
+                    'data' => [],
+                ]);
+            }
+
+            return $this->successResponse('Completed services fetched successfully', [
+                'data' => $services,
+            ]);
+        });
+    }
 }
