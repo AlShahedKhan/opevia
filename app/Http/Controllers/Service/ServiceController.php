@@ -182,4 +182,30 @@ class ServiceController extends Controller
             ]);
         });
     }
+    public function processingServices(){
+        return $this->safeCall(function () {
+            $user = Auth::user();
+
+            // Check if the user has the role of 'worker'
+            if (!$user || $user->role !== 'worker') {
+                return $this->errorResponse('Unauthorized access', 403);
+            }
+
+            // Fetch pending services where the worker_id matches the authenticated user's ID and include related client data
+            $services = Service::where('worker_id', $user->id)
+                ->where('status', 'processing')
+                ->with('client')
+                ->get();
+
+            if ($services->isEmpty()) {
+                return $this->successResponse('No processing services found.', [
+                    'data' => [],
+                ]);
+            }
+
+            return $this->successResponse('processing services fetched successfully', [
+                'data' => $services,
+            ]);
+        });
+    }
 }
