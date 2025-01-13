@@ -31,7 +31,7 @@ Route::group([
     Route::post('/logout', [AuthController::class, 'logout']);
     // Route::put('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
     Route::post('/worker-profile', [AuthController::class, 'WorkerProfileUpdate'])->name('worker-profile.update');
-    
+
     Route::post('/client-profile', [AuthController::class, 'ClientProfileUpdate'])->name('client-profile.update');
 
     Route::get('/get-worker-profile', [AuthController::class, 'GetWorkerProfile']);
@@ -43,7 +43,6 @@ Route::group([
     Route::get('/clients/{client}', [ClientController::class, 'show']);
 
     Route::get('/services', [ServiceController::class, 'index']);
-    Route::post('/book-service', [ServiceController::class, 'bookService']);
     // Route to accept a service
     Route::post('/services/{service}/accept', [ServiceController::class, 'acceptService']);
 
