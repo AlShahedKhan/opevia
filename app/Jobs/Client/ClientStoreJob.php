@@ -43,6 +43,7 @@ class ClientStoreJob implements ShouldQueue
                     'amount' => $this->data['amount'],
                     'description' => $this->data['description'] ?? null,
                     'privacy_policy_agreement' => $this->data['privacy_policy_agreement'],
+                    'payment_method' => $this->data['payment_method']
                 ]);
 
 

@@ -69,11 +69,11 @@ Route::group([
 
     Route::get('/payments', [PaymentController::class, 'index']);
 
-    Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
+    // Route::post('/payment-intent/{client}', [PaymentController::class, 'createPaymentIntent']);
 
-    Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
+    // Route::post('/confirm-payment/{client}', [PaymentController::class, 'confirmPaymentIntent']);
 
-    Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
+    // Route::post('/release-payment/{client}', [PaymentController::class, 'releasePayment']);
 
     Route::post('/refund-payment/{workers}', [PaymentController::class, 'refundPayment']);
 });
